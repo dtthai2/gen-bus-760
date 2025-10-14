@@ -1,0 +1,185 @@
+/* Download the files on canvas, and unzip them before following the steps below: */
+
+-- first create the database
+DROP DATABASE yelp;
+CREATE DATABASE IF NOT EXISTS yelp;
+CREATE SCHEMA yelp;
+
+
+use yelp.yelp;
+
+
+CREATE OR REPLACE TABLE business (
+    bid NUMBER,
+    business_id VARCHAR(100),
+    name VARCHAR(100),
+    address VARCHAR(150),
+    city VARCHAR(100),
+    state VARCHAR(100),
+    postal_code VARCHAR(50),
+    latitude FLOAT,
+    longitude FLOAT,
+    stars FLOAT,
+    review_count NUMBER,
+    is_open NUMBER
+);
+
+
+-- create the user table 
+
+CREATE OR REPLACE TABLE user (
+    uid NUMBER,
+    user_id VARCHAR(100),
+    name VARCHAR(100),
+    review_count NUMBER,
+    yelping_since DATE,
+    average_stars FLOAT,
+    useful NUMBER,
+    funny NUMBER,
+    cool NUMBER,
+    fans NUMBER,
+    compliment_hot NUMBER,
+    compliment_more NUMBER,
+    compliment_profile NUMBER,
+    compliment_cute NUMBER,
+    compliment_list NUMBER,
+    compliment_note NUMBER,
+    compliment_plain NUMBER,
+    compliment_cool NUMBER,
+    compliment_funny NUMBER,
+    compliment_writer NUMBER,
+    compliment_photos NUMBER
+);
+
+--  now repeat the same for review_notext
+
+CREATE OR REPLACE TABLE review_notext (
+    rid NUMBER,
+    review_id VARCHAR(100),
+    business_id VARCHAR(100),
+    user_id VARCHAR(100),
+    stars NUMBER,
+    date DATE,
+    useful_votes NUMBER,
+    funny_votes NUMBER,
+    cool_votes NUMBER
+);
+
+-- CREATE category table
+
+CREATE OR REPLACE TABLE category (
+    cid NUMBER,
+    business_id VARCHAR(100),
+    category_name VARCHAR(100)
+);
+
+/* Check the data to get the feel of the table structures and columns  */
+use yelp.yelp;
+
+SELECT * FROM business LIMIT 10;
+SELECT * FROM user LIMIT 10;
+SELECT * FROM review_notext LIMIT 10;
+SELECT * FROM category LIMIT 10;
+
+
+-- Q1 [2 point]: List the distinct business categories. in the data, sorted alphabetically in increasing order. (hint: use the category table)
+
+select
+    distinct category_name
+from category
+order by 1
+;
+
+-- Q2 [3 point]: What are the top 3 states with the largest number of businesses?
+
+select
+    state,
+    count(business_id) as number_of_businesses 
+from business
+group by 1
+order by 2 desc
+limit 3
+;
+
+-- Q3 [3 point]: How many restaurants are in the dataset? (hint: filter on category = 'Restaurants')
+
+select
+    count(a.business_id) as total_number_of_restaurants
+from business a
+inner join category b
+    on a.business_id = b.business_id
+where category_name = 'Restaurants'
+;
+
+-- Q4 [3 point]: How many reviews for restaurants are in the dataset?
+
+select
+    sum(review_count) as total_restaurant_reviews
+from business a
+inner join category b
+    on a.business_id = b.business_id
+where category_name = 'Restaurants'
+;
+
+-- Q5 [4 point]: Who are the top 3 users who wrote the largest number of reviews for restaurants for each year?
+
+select
+    user_id,
+    count(review_id) as total_restaurant_reviews
+from review_notext a
+inner join category b
+    on a.business_id = b.business_id
+where category_name = 'Restaurants'
+group by user_id
+order by 2 desc
+limit 3
+;
+
+-- Q6 [5 points]: Find the most popular bar(s) in each state (category_name = 'Bars'). Assume that the most popular bar in a state is the one with the largest number of reviews. If there are multiple most popular bars in a state with the same number of reviews, list all of them in the final results. Display the state, business_id, name, and number of reviews, ordered by state in increasing order. Your final result will look like the following format:
+
+select
+    a.state,
+    a.business_id,
+    name,
+    review_count
+from business a
+inner join category b
+    on a.business_id = b.business_id
+inner join (
+    select
+        state,
+        max(review_count) as highest_review_count,
+    from business a
+    inner join category b
+        on a.business_id = b.business_id
+    where category_name = 'Bars'
+    group by 1
+) c
+    on a.state = c.state AND a.review_count = c.highest_review_count
+where 
+    category_name = 'Bars' 
+order by a.state
+;
+
+select business_id from (
+select
+    state,
+    a.business_id,
+    max(review_count),
+from business a
+inner join category b
+    on a.business_id = b.business_id
+where category_name = 'Bars'
+group by 1, 2
+)
+;
+
+select
+    state,
+    max(review_count),
+from business a
+inner join category b
+    on a.business_id = b.business_id
+where category_name = 'Bars'
+group by 1
+;
